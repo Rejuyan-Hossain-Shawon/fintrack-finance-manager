@@ -1,0 +1,2 @@
+import mongoose from 'mongoose';
+const schema=new mongoose.Schema({user:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true,index:true},name:{type:String,required:true,trim:true,maxlength:80},targetCents:{type:Number,required:true,min:1},savedCents:{type:Number,required:true,min:0,default:0},targetDate:{type:String,default:''}},{timestamps:true});export default mongoose.model('Goal',schema);
