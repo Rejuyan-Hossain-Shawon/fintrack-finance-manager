@@ -1,3 +1,6 @@
+#Live Demo 
+https://fintrack-shawon-fa8380501746.herokuapp.com/
+
 # FinTrack V3 — Personal Finance & Budget Manager
 
 MERN portfolio application. React/Vite frontend (5174), Express API (5001), MongoDB Atlas, JWT authentication, budgets, transactions, savings goals, and a role-protected administrator dashboard.
