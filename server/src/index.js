@@ -1,4 +1,29 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import 'dotenv/config';import express from 'express';import cors from 'cors';import helmet from 'helmet';import rateLimit from 'express-rate-limit';import mongoose from 'mongoose';import authRoutes from './routes/auth.js';import adminRoutes from './routes/admin.js';import goalRoutes from './routes/goals.js';import financeRoutes from './routes/finance.js';
 for(const key of ['MONGODB_URI','JWT_SECRET'])if(!process.env[key]||process.env[key].includes('replace_with')){console.error(`Missing or invalid ${key} in server/.env`);process.exit(1)}
-const app=express();app.disable('x-powered-by');app.use(helmet());app.use(cors({origin:process.env.CLIENT_ORIGIN||'http://localhost:5174'}));app.use(express.json({limit:'50kb'}));app.use('/api/auth',rateLimit({windowMs:15*60*1000,limit:50,standardHeaders:'draft-7',legacyHeaders:false,message:{message:'Too many requests. Please try again later.'}}),authRoutes);app.use('/api',financeRoutes);app.use('/api/admin',adminRoutes);app.use('/api/goals',goalRoutes);app.get('/api/health',(_req,res)=>res.json({status:'ok'}));app.use((req,res)=>res.status(404).json({code:'NOT_FOUND',message:'API endpoint not found.'}));app.use((err,req,res,next)=>{if(err.type==='entity.too.large')return res.status(413).json({code:'REQUEST_TOO_LARGE',message:'Request is too large.'});if(err instanceof SyntaxError&&'body' in err)return res.status(400).json({code:'INVALID_JSON',message:'Invalid JSON request.'});console.error(err);res.status(500).json({code:'SERVER_ERROR',message:'Server error. Please try again later.'});});
+const app=express();app.disable('x-powered-by');app.use(helmet());app.use(cors({origin:process.env.CLIENT_ORIGIN||'http://localhost:5174'}));app.use(express.json({limit:'50kb'}));app.use('/api/auth',rateLimit({windowMs:15*60*1000,limit:50,standardHeaders:'draft-7',legacyHeaders:false,message:{message:'Too many requests. Please try again later.'}}),authRoutes);app.use('/api',financeRoutes);app.use('/api/admin',adminRoutes);app.use('/api/goals',goalRoutes);app.get('/api/health',(_req,res)=>res.json({status:'ok'}));if (process.env.NODE_ENV === 'production') {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const clientDist = path.resolve(currentDir, '../../client/dist');
+
+  app.use(express.static(clientDist));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'API endpoint not found.'
+      });
+    }
+
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+  app.use((req, res) =>
+    res.status(404).json({
+      code: 'NOT_FOUND',
+      message: 'API endpoint not found.'
+    })
+  );
+}app.use((err,req,res,next)=>{if(err.type==='entity.too.large')return res.status(413).json({code:'REQUEST_TOO_LARGE',message:'Request is too large.'});if(err instanceof SyntaxError&&'body' in err)return res.status(400).json({code:'INVALID_JSON',message:'Invalid JSON request.'});console.error(err);res.status(500).json({code:'SERVER_ERROR',message:'Server error. Please try again later.'});});
 try{await mongoose.connect(process.env.MONGODB_URI,{serverSelectionTimeoutMS:10000});const port=Number(process.env.PORT)||5001;app.listen(port,()=>console.log(`FinTrack API ready at http://localhost:${port}`));}catch(e){console.error('Database connection failed:',e.message);process.exit(1)}
